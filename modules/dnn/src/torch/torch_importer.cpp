@@ -617,7 +617,8 @@ struct TorchImporter : public ::cv::dnn::Importer
                 curModule->modules.push_back(cv::Ptr<Module>(new Module(nnName, "Sigmoid")));
                 readObject();
             }
-            else if (nnName == "SpatialBatchNormalization" || nnName == "InstanceNormalization")
+            else if (nnName == "SpatialBatchNormalization" || nnName == "InstanceNormalization" ||
+                     nnName == "BatchNormalization")
             {
                 newModule->apiType = "BatchNorm";
                 readTorchTable(scalarParams, tensorParams);
@@ -700,17 +701,24 @@ struct TorchImporter : public ::cv::dnn::Importer
 
                 curModule->modules.push_back(newModule);
             }
-            else if (nnName == "SpatialDropout")
+            else if (nnName == "SpatialDropout" || nnName == "Dropout")
             {
                 readTorchTable(scalarParams, tensorParams);
                 CV_Assert(scalarParams.has("p"));
 
-                float scale = 1 -  scalarParams.get<double>("p");
+                if (scalarParams.has("v2") && scalarParams.get<bool>("v2"))
+                {
+                    newModule->apiType = "Identity";
+                }
+                else
+                {
+                    float scale = 1 -  scalarParams.get<double>("p");
 
-                CV_Assert(scale > 0);
+                    CV_Assert(scale > 0);
 
-                newModule->apiType = "Power";
-                layerParams.set("scale", scale);
+                    newModule->apiType = "Power";
+                    layerParams.set("scale", scale);
+                }
                 curModule->modules.push_back(newModule);
             }
             // TotalVariation layer is from fast-neural-style project: https://github.com/jcjohnson/fast-neural-style
@@ -1198,6 +1206,16 @@ Mat readTorchBlob(const String &filename, bool isBinary)
     return importer->tensors.begin()->second;
 }
 
+Net readNetFromTorch(const String &model, bool isBinary)
+{
+    CV_TRACE_FUNCTION();
+
+    TorchImporter importer(model, isBinary);
+    Net net;
+    importer.populateNet(net);
+    return net;
+}
+
 #else
 
 Ptr<Importer> createTorchImporter(const String&, bool)
@@ -1212,17 +1230,13 @@ Mat readTorchBlob(const String&, bool)
     return Mat();
 }
 
-#endif //defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
-
 Net readNetFromTorch(const String &model, bool isBinary)
 {
-    CV_TRACE_FUNCTION();
-
-    TorchImporter importer(model, isBinary);
-    Net net;
-    importer.populateNet(net);
-    return net;
+    CV_Error(Error::StsNotImplemented, "Torch importer is disabled in current build");
+    return Net();
 }
+
+#endif //defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace
