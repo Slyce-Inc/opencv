@@ -170,6 +170,7 @@ class Builder:
                 "-sdk", target.lower(),
                 "-configuration", "Release",
                 "-parallelizeTargets",
+                "-UseModernBuildSystem=NO",
                 "-jobs", str(multiprocessing.cpu_count()),
             ] + (["-target","ALL_BUILD"] if self.dynamic else [])
 
