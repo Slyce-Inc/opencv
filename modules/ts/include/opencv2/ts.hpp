@@ -17,6 +17,8 @@
 
 #include "opencv2/core/utils/trace.hpp"
 
+#include "opencv2/core/hal/hal.hpp"
+
 #include <stdarg.h> // for va_list
 
 #include "cvconfig.h"
@@ -36,6 +38,18 @@
 #include <limits>
 #include <algorithm>
 
+
+#ifndef OPENCV_32BIT_CONFIGURATION
+# if defined(INTPTR_MAX) && defined(INT32_MAX) && INTPTR_MAX == INT32_MAX
+#   define OPENCV_32BIT_CONFIGURATION 1
+# elif defined(_WIN32) && !defined(_WIN64)
+#   define OPENCV_32BIT_CONFIGURATION 1
+# endif
+#else
+# if OPENCV_32BIT_CONFIGURATION == 0
+#   undef OPENCV_32BIT_CONFIGURATION
+# endif
+#endif
 
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
